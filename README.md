@@ -1,0 +1,1 @@
+# Vera-Plugin-SurveillanceStationRemote
