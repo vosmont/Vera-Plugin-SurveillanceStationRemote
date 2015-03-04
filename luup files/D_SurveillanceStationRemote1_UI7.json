@@ -1,0 +1,269 @@
+{
+	"default_icon": "https://raw.githubusercontent.com/vosmont/Vera-Plugin-SurveillanceStationRemote/master/icons/surveillance_station_remote_on.png",
+	"state_icons": [
+		{
+			"img": "https://raw.githubusercontent.com/vosmont/Vera-Plugin-SurveillanceStationRemote/master/icons/surveillance_station_remote_off.png",
+			"conditions": [
+				{
+					"service": "urn:micasaverde-com:serviceId:SecuritySensor1",
+					"variable": "Armed",
+					"operator": "==",
+					"value": 0
+				}
+			]
+		},
+		{
+			"img": "https://raw.githubusercontent.com/vosmont/Vera-Plugin-SurveillanceStationRemote/master/icons/surveillance_station_remote_on.png",
+			"conditions": [
+				{
+					"service": "urn:micasaverde-com:serviceId:SecuritySensor1",
+					"variable": "Armed",
+					"operator": "==",
+					"value": 1
+				}
+			]
+		},
+		{
+			"img": "https://raw.githubusercontent.com/vosmont/Vera-Plugin-SurveillanceStationRemote/master/icons/surveillance_station_remote_rec.png",
+			"conditions": [
+				{
+					"service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+					"variable": "Record",
+					"operator": "==",
+					"value": 1
+				}
+			]
+		}
+	],
+	"x": "2",
+	"y": "2",
+	"inScene": "1",
+	"ToggleButton": 1,
+	"doc_url":{
+		"doc_forced_url":{
+			"text":"http://forum.micasaverde.com/"
+		}
+	},
+	"Tabs":[
+		{
+			"Label": {
+				"lang_tag": "ui7_tabname_control",
+				"text": "Control"
+			},
+			"Position": "0",
+			"TabType": "flash",
+			"TopNavigationTab": "1",
+			"SceneGroup": [
+				{
+					"id": "1",
+					"top": "0",
+					"left": "0",
+					"x": "2",
+					"y": "1"
+				},
+				{
+					"id": "2",
+					"top": "1",
+					"left": "0",
+					"x": "1",
+					"y": "1"
+				}
+			],
+			"ControlGroup": [
+				{
+					"id": "1",
+					"isSingle": "1",
+					"scenegroup": "1"
+				},
+				{
+					"id": "2",
+					"isSingle": "1",
+					"scenegroup": "1"
+				},
+				{
+					"id": "3",
+					"isSingle": "1",
+					"scenegroup": "2"
+				}
+			],
+			"Control": [
+				{
+					"ControlGroup": "1",
+					"ControlType": "multi_state_button",
+					"top": "0",
+					"left": "0",
+					"states": [
+						{
+							"Label": {
+								"lang_tag": "ui7_cmd_bypass",
+								"text": "Bypassed"
+							},
+							"ControlGroup": "1",
+							"Display": {
+								"Service": "urn:micasaverde-com:serviceId:SecuritySensor1",
+								"Variable": "Armed",
+								"Value": "0"
+							},
+							"Command": {
+								"Service": "urn:micasaverde-com:serviceId:SecuritySensor1",
+								"Action": "SetArmed",
+								"Parameters": [
+									{
+										"Name": "newArmedValue",
+										"Value": "0"
+									}
+								]
+							},
+							"ControlCode": "SSR_Bypassed"
+						},
+						{
+							"Label": {
+								"lang_tag": "ui7_cmd_arm",
+								"text": "Armed"
+							},
+							"ControlGroup": "1",
+							"Display": {
+								"Service": "urn:micasaverde-com:serviceId:SecuritySensor1",
+								"Variable": "Armed",
+								"Value": "1"
+							},
+							"Command": {
+								"Service": "urn:micasaverde-com:serviceId:SecuritySensor1",
+								"Action": "SetArmed",
+								"Parameters": [
+									{
+										"Name": "newArmedValue",
+										"Value": "1"
+									}
+								]
+							},
+							"ControlCode": "SSR_Armed"
+						}
+					],
+					"Display": {
+						"Top": 0,
+						"Left": 10
+					}
+				},
+				{
+					"ControlGroup": "2",
+					"ControlType": "multi_state_button",
+					"top": "0",
+					"left": "1",
+					"states": [
+						{
+							"Label": {
+								"lang_tag": "ui7_cmd_stop",
+								"text": "Stop"
+							},
+							"ControlGroup": "2",
+							"Display": {
+								"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+								"Variable": "Record",
+								"Value": "0"
+							},
+							"Command": {
+								"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+								"Action": "SetRecordTarget",
+								"Parameters": [
+									{
+										"Name": "newRecordTargetValue",
+										"Value": "0"
+									}
+								]
+							},
+							"ControlCode": "record_off"
+						},
+						{
+							"Label": {
+								"lang_tag": "ui7_btn_record",
+								"text": "REC"
+							},
+							"ControlGroup": "2",
+							"Display": {
+								"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+								"Variable": "Record",
+								"Value": "1"
+							},
+							"Command": {
+								"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+								"Action": "SetRecordTarget",
+								"Parameters": [
+									{
+										"Name": "newRecordTargetValue",
+										"Value": "1"
+									}
+								]
+							},
+							"ControlCode": "record_on"
+						}
+					],
+					"Display": {
+						"Top": 0,
+						"Left": 100
+					}
+				},
+				{
+					"ControlGroup": "3",
+					"ControlType": "variable",
+					"top": "0",
+					"left": "0",
+					"x": "3",
+					"y": "1",
+					"text_align": "left",
+					"Display": {
+						"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+						"Variable": "LastError",
+						"Top": 100,
+						"Left": 10,
+						"Width": 300,
+						"Height": 80
+					}
+				},
+				{
+					"ControlType": "button",
+					"Label": {
+						"lang_tag": "cmd_update",
+						"text": "Update"
+					},
+					"Display": {
+						"Top": 11,
+						"Left": 200,
+						"Width": 75,
+						"Height": 20
+					},
+					"Command": {
+						"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+						"Action": "Update",
+						"Parameters": []
+					},
+					"ControlCode": "update"
+				}
+			]
+		},
+		{
+			"Label": {
+				"lang_tag": "cameras",
+				"text": "Cameras"
+			},
+			"Position": "1",
+			"TabType": "javascript",
+			"TopNavigationTab": "1",
+			"ScriptName": "J_SurveillanceStationRemote1.js",
+			"Function": "SurveillanceStationRemote.showCameras"
+		},
+		{
+			"Label":{
+				"lang_tag":"advanced",
+				"text":"Advanced"
+			},
+			"Position":"2",
+			"TabType":"javascript",
+			"ScriptName":"shared.js",
+			"Function":"advanced_device"
+		}
+	],
+	"eventList2":[
+	],
+	"DeviceType":"urn:schemas-upnp-org:device:SurveillanceStationRemote:1"
+}

@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<implementation>
+	<files>L_SurveillanceStationRemote1.lua</files>
+	<startup>startup</startup>
+	<actionList>
+		<action>
+			<serviceId>urn:micasaverde-com:serviceId:SecuritySensor1</serviceId>
+			<name>SetArmed</name>
+			<job>
+				return setArmed(lul_device, lul_settings)
+			</job>
+		</action>
+		<action>
+			<serviceId>urn:upnp-org:serviceId:serviceId:SurveillanceStationRemote1</serviceId>
+			<name>SetArmed</name>
+			<job>
+				return setArmed(lul_device, lul_settings)
+			</job>
+		</action>
+		<action>
+			<serviceId>urn:upnp-org:serviceId:SurveillanceStationRemote1</serviceId>
+			<name>SetRecordTarget</name>
+			<job>
+				return setRecordTarget(lul_device, lul_settings)
+			</job>
+		</action>
+		<action>
+			<serviceId>urn:upnp-org:serviceId:SurveillanceStationRemote1</serviceId>
+			<name>Update</name>
+			<job>
+				return update(lul_device, lul_settings)
+			</job>
+		</action>
+	</actionList>
+</implementation>
+ 

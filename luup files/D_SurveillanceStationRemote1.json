@@ -1,0 +1,251 @@
+{
+	"flashicon": "https://raw.githubusercontent.com/vosmont/Vera-Plugin-SurveillanceStationRemote/master/icons/surveillance_station_remote.png",
+	"state_icons": [
+		"https://raw.githubusercontent.com/vosmont/Vera-Plugin-SurveillanceStationRemote/master/icons/surveillance_station_remote_0.png",
+		"https://raw.githubusercontent.com/vosmont/Vera-Plugin-SurveillanceStationRemote/master/icons/surveillance_station_remote_1.png"
+	],
+	"x": "2",
+	"y": "3",
+	"inScene": "1",
+	"DisplayStatus": {
+		"Service": "urn:micasaverde-com:serviceId:SecuritySensor1",
+		"Variable": "Armed",
+		"MinValue": "0",
+		"MaxValue": "1"
+	},
+	"doc_url":{
+		"doc_forced_url":{
+			"text":"http://forum.micasaverde.com/"
+		}
+	},
+	"Tabs":[
+		{
+			"Label": {
+				"lang_tag": "tabname_control",
+				"text": "Control"
+			},
+			"Position": "0",
+			"TabType": "flash",
+			"SceneGroup": [
+				{
+					"id": "1",
+					"top": "0.5",
+					"left": "0",
+					"x": "2",
+					"y": "2.5"
+				}
+			],
+			"ControlGroup": [
+				{
+					"id": "1",
+					"isSingle": "1",
+					"scenegroup": "1"
+				},
+				{
+					"id": "2",
+					"isSingle": "1",
+					"scenegroup": "1"
+				},
+				{
+					"id": "3",
+					"isSingle": "1",
+					"scenegroup": "1"
+				},
+				{
+					"id": "4",
+					"isSingle": "1",
+					"scenegroup": "1"
+				},
+				{
+					"id": "5",
+					"isSingle": "1",
+					"scenegroup": "1"
+				}
+			],
+			"Control": [
+				{
+					"ControlGroup": "1",
+					"ControlType": "button",
+					"top": "1.5",
+					"left": "0",
+					"Label": {
+						"lang_tag": "cmd_bypass",
+						"text": "Bypassed"
+					},
+					"Display": {
+						"Service": "urn:micasaverde-com:serviceId:SecuritySensor1",
+						"Variable": "Armed",
+						"Value": "0",
+						"Top": 75,
+						"Left": 50,
+						"Width": 75,
+						"Height": 20
+					},
+					"Command": {
+						"Service": "urn:micasaverde-com:serviceId:SecuritySensor1",
+						"Action": "SetArmed",
+						"Parameters": [
+							{
+								"Name": "newArmedValue",
+								"Value": "0"
+							}
+						]
+					},
+					"ControlCode": "SSR_Bypassed"
+				},
+				{
+					"ControlGroup": "1",
+					"ControlType": "button",
+					"top": "1.5",
+					"left": "1",
+					"Label": {
+						"lang_tag": "cmd_arm",
+						"text": "Armed"
+					},
+					"Display": {
+						"Service": "urn:micasaverde-com:serviceId:SecuritySensor1",
+						"Variable": "Armed",
+						"Value": "1",
+						"Top": 75,
+						"Left": 145,
+						"Width": 75,
+						"Height": 20
+					},
+					"Command": {
+						"Service": "urn:micasaverde-com:serviceId:SecuritySensor1",
+						"Action": "SetArmed",
+						"Parameters": [
+							{
+								"Name": "newArmedValue",
+								"Value": "1"
+							}
+						]
+					},
+					"ControlCode": "SSR_Armed"
+				},
+				{
+					"ControlGroup": "3",
+					"ControlType": "button",
+					"top": "2.5",
+					"left": "0",
+					"Label": {
+						"lang_tag": "cmd_record_off",
+						"text": "Stop"
+					},
+					"Display": {
+						"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+						"Variable": "Record",
+						"Value": "0",
+						"Top": 100,
+						"Left": 50,
+						"Width": 75,
+						"Height": 20
+					},
+					"Command": {
+						"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+						"Action": "SetRecordTarget",
+						"Parameters": [
+							{
+								"Name": "newRecordTargetValue",
+								"Value": "0"
+							}
+						]
+					},
+					"ControlCode": "record_off"
+				},
+				{
+					"ControlGroup": "3",
+					"ControlType": "button",
+					"top": "2.5",
+					"left": "1",
+					"Label": {
+						"lang_tag": "cmd_record_on",
+						"text": "REC"
+					},
+					"Display": {
+						"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+						"Variable": "Record",
+						"Value": "1",
+						"Top": 100,
+						"Left": 145,
+						"Width": 75,
+						"Height": 20
+					},
+					"Command": {
+						"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+						"Action": "SetRecordTarget",
+						"Parameters": [
+							{
+								"Name": "newRecordTargetValue",
+								"Value": "1"
+							}
+						]
+					},
+					"ControlCode": "record_on"
+				},
+				{
+					"ControlGroup": "5",
+					"ControlType": "variable",
+					"top": "0",
+					"left": "0",
+					"text_align": "left",
+					"Label": {
+						"lang_tag": "vname"
+					},
+					"Display": {
+						"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+						"Variable": "LastError",
+						"Top": 10,
+						"Left": 10,
+						"Width": 200,
+						"Height": 60
+					}
+				},
+				{
+					"ControlType": "button",
+					"top": "3.5",
+					"left": "1",
+					"Label": {
+						"lang_tag": "cmd_update",
+						"text": "Update"
+					},
+					"Display": {
+						"Top": 150,
+						"Left": 145,
+						"Width": 75,
+						"Height": 20
+					},
+					"Command": {
+						"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+						"Action": "Update",
+						"Parameters": []
+					},
+					"ControlCode": "update"
+				}
+			]
+		},
+		{
+			"Label": {
+				"lang_tag": "cameras",
+				"text": "Cameras"
+			},
+			"Position": "1",
+			"TabType": "javascript",
+			"ScriptName": "J_SurveillanceStationRemote1.js",
+			"Function": "SurveillanceStationRemote.showCameras"
+		},
+		{
+			"Label":{
+				"lang_tag":"advanced",
+				"text":"Advanced"
+			},
+			"Position":"2",
+			"TabType":"javascript",
+			"ScriptName":"shared.js",
+			"Function":"advanced_device"
+		}
+	],
+	"eventList2":[
+	],
+	"DeviceType":"urn:schemas-upnp-org:device:SurveillanceStationRemote:1"
+}
