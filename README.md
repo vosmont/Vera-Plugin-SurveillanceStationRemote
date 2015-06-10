@@ -1,8 +1,8 @@
 # Vera-Plugin-SurveillanceStationRemote
 
-Plugin for [getVera](http://getvera.com/) Home Controller (VeraEdge, Vera3, VeraLite)
+Plugin for [getVera](http://getvera.com/) Home Controller (VeraEdge, Vera3, VeraLite).
 
-**Only compatible with UI7**
+**Compatible with UI5 & UI7**
 
 Remote for Synology Surveillance Station.
 
