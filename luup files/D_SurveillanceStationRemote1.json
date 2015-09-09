@@ -1,8 +1,8 @@
 {
-	"flashicon": "https://raw.githubusercontent.com/vosmont/Vera-Plugin-SurveillanceStationRemote/master/icons/surveillance_station_remote.png",
+	"flashicon": "http://vosmont.github.io/icons/surveillance_station_remote.png",
 	"state_icons": [
-		"https://raw.githubusercontent.com/vosmont/Vera-Plugin-SurveillanceStationRemote/master/icons/surveillance_station_remote_0.png",
-		"https://raw.githubusercontent.com/vosmont/Vera-Plugin-SurveillanceStationRemote/master/icons/surveillance_station_remote_1.png"
+		"surveillance_station_remote_0.png",
+		"surveillance_station_remote_100.png"
 	],
 	"x": "2",
 	"y": "3",
@@ -15,7 +15,7 @@
 	},
 	"doc_url":{
 		"doc_forced_url":{
-			"text":"http://forum.micasaverde.com/"
+			"text":"https://github.com/vosmont/Vera-Plugin-SurveillanceStationRemote"
 		}
 	},
 	"Tabs":[
@@ -69,12 +69,12 @@
 					"top": "1.5",
 					"left": "0",
 					"Label": {
-						"lang_tag": "cmd_bypass",
-						"text": "Bypassed"
+						"lang_tag": "cmd_off",
+						"text": "OFF"
 					},
 					"Display": {
-						"Service": "urn:micasaverde-com:serviceId:SecuritySensor1",
-						"Variable": "Armed",
+						"Service": "urn:upnp-org:serviceId:SwitchPower1",
+						"Variable": "Status",
 						"Value": "0",
 						"Top": 75,
 						"Left": 50,
@@ -82,11 +82,11 @@
 						"Height": 20
 					},
 					"Command": {
-						"Service": "urn:micasaverde-com:serviceId:SecuritySensor1",
-						"Action": "SetArmed",
+						"Service": "urn:upnp-org:serviceId:SwitchPower1",
+						"Action": "SetTarget",
 						"Parameters": [
 							{
-								"Name": "newArmedValue",
+								"Name": "newTargetValue",
 								"Value": "0"
 							}
 						]
@@ -99,12 +99,12 @@
 					"top": "1.5",
 					"left": "1",
 					"Label": {
-						"lang_tag": "cmd_arm",
-						"text": "Armed"
+						"lang_tag": "cmd_on",
+						"text": "ON"
 					},
 					"Display": {
-						"Service": "urn:micasaverde-com:serviceId:SecuritySensor1",
-						"Variable": "Armed",
+						"Service": "urn:upnp-org:serviceId:SwitchPower1",
+						"Variable": "Status",
 						"Value": "1",
 						"Top": 75,
 						"Left": 145,
@@ -112,11 +112,11 @@
 						"Height": 20
 					},
 					"Command": {
-						"Service": "urn:micasaverde-com:serviceId:SecuritySensor1",
-						"Action": "SetArmed",
+						"Service": "urn:upnp-org:serviceId:SwitchPower1",
+						"Action": "SetTarget",
 						"Parameters": [
 							{
-								"Name": "newArmedValue",
+								"Name": "newTargetValue",
 								"Value": "1"
 							}
 						]
@@ -188,13 +188,15 @@
 					"ControlType": "variable",
 					"top": "0",
 					"left": "0",
+					"x": "2",
+					"y": "1",
 					"text_align": "left",
 					"Label": {
-						"lang_tag": "vname"
+						"lang_tag": "message"
 					},
 					"Display": {
 						"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
-						"Variable": "LastError",
+						"Variable": "Message",
 						"Top": 10,
 						"Left": 10,
 						"Width": 200,
@@ -246,6 +248,20 @@
 		}
 	],
 	"eventList2":[
+		{
+			"id": 1,
+			"label": {
+				"lang_tag": "ui5_surveillance_station_remote_has_com_failure",
+				"text": "Whenever Surveillance Station Remote has a communication failure"
+			},
+			"serviceId": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+			"serviceStateTable": {
+				"CommFailure": {
+					"value": "1",
+					"comparisson": "="
+				}
+			}
+		}
 	],
 	"DeviceType":"urn:schemas-upnp-org:device:SurveillanceStationRemote:1"
 }

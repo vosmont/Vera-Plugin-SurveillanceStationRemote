@@ -1,30 +1,30 @@
 {
-	"default_icon": "https://raw.githubusercontent.com/vosmont/Vera-Plugin-SurveillanceStationRemote/master/icons/surveillance_station_remote_on.png",
+	"default_icon": "http://vosmont.github.io/icons/surveillance_station_remote_on.png",
 	"state_icons": [
 		{
-			"img": "https://raw.githubusercontent.com/vosmont/Vera-Plugin-SurveillanceStationRemote/master/icons/surveillance_station_remote_off.png",
+			"img": "http://vosmont.github.io/icons/surveillance_station_remote_failure.png",
 			"conditions": [
 				{
-					"service": "urn:micasaverde-com:serviceId:SecuritySensor1",
-					"variable": "Armed",
-					"operator": "==",
-					"value": 0
-				}
-			]
-		},
-		{
-			"img": "https://raw.githubusercontent.com/vosmont/Vera-Plugin-SurveillanceStationRemote/master/icons/surveillance_station_remote_on.png",
-			"conditions": [
-				{
-					"service": "urn:micasaverde-com:serviceId:SecuritySensor1",
-					"variable": "Armed",
+					"service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+					"variable": "CommFailure",
 					"operator": "==",
 					"value": 1
 				}
 			]
 		},
 		{
-			"img": "https://raw.githubusercontent.com/vosmont/Vera-Plugin-SurveillanceStationRemote/master/icons/surveillance_station_remote_rec.png",
+			"img": "http://vosmont.github.io/icons/surveillance_station_remote_off.png",
+			"conditions": [
+				{
+					"service": "urn:upnp-org:serviceId:SwitchPower1",
+					"variable": "Status",
+					"operator": "==",
+					"value": 0
+				}
+			]
+		},
+		{
+			"img": "http://vosmont.github.io/icons/surveillance_station_remote_rec.png",
 			"conditions": [
 				{
 					"service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
@@ -33,15 +33,23 @@
 					"value": 1
 				}
 			]
+		},
+		{
+			"img": "http://vosmont.github.io/icons/surveillance_station_remote_on.png",
+			"conditions": [
+				{
+					"service": "urn:upnp-org:serviceId:SwitchPower1",
+					"variable": "Status",
+					"operator": "==",
+					"value": 1
+				}
+			]
 		}
 	],
-	"x": "2",
-	"y": "2",
 	"inScene": "1",
-	"ToggleButton": 1,
 	"doc_url":{
 		"doc_forced_url":{
-			"text":"http://forum.micasaverde.com/"
+			"text":"https://github.com/vosmont/Vera-Plugin-SurveillanceStationRemote"
 		}
 	},
 	"Tabs":[
@@ -50,94 +58,68 @@
 				"lang_tag": "ui7_tabname_control",
 				"text": "Control"
 			},
-			"Position": "0",
+			"Position": 0,
 			"TabType": "flash",
-			"TopNavigationTab": "1",
+			"TopNavigationTab": 1,
 			"SceneGroup": [
 				{
-					"id": "1",
-					"top": "0",
-					"left": "0",
-					"x": "2",
-					"y": "1"
-				},
-				{
-					"id": "2",
-					"top": "1",
-					"left": "0",
-					"x": "1",
-					"y": "1"
+					"id": 1
 				}
 			],
 			"ControlGroup": [
 				{
-					"id": "1",
-					"isSingle": "1",
-					"scenegroup": "1"
-				},
-				{
-					"id": "2",
-					"isSingle": "1",
-					"scenegroup": "1"
-				},
-				{
-					"id": "3",
-					"isSingle": "1",
-					"scenegroup": "2"
+					"id": 1,
+					"scenegroup": 1
 				}
 			],
 			"Control": [
 				{
-					"ControlGroup": "1",
+					"ControlGroup": 1,
 					"ControlType": "multi_state_button",
-					"top": "0",
-					"left": "0",
 					"states": [
 						{
+							"ControlCode": "SurveillanceStationRemote_off",
 							"Label": {
-								"lang_tag": "ui7_cmd_bypass",
-								"text": "Bypassed"
+								"lang_tag": "ui7_off",
+								"text": "OFF"
 							},
-							"ControlGroup": "1",
 							"Display": {
-								"Service": "urn:micasaverde-com:serviceId:SecuritySensor1",
-								"Variable": "Armed",
+								"Service": "urn:upnp-org:serviceId:SwitchPower1",
+								"Variable": "Status",
 								"Value": "0"
 							},
 							"Command": {
-								"Service": "urn:micasaverde-com:serviceId:SecuritySensor1",
-								"Action": "SetArmed",
+								"Service": "urn:upnp-org:serviceId:SwitchPower1",
+								"Action": "SetTarget",
 								"Parameters": [
 									{
-										"Name": "newArmedValue",
+										"Name": "newTargetValue",
 										"Value": "0"
 									}
 								]
-							},
-							"ControlCode": "SSR_Bypassed"
+							}
 						},
 						{
+							"ControlCode": "SurveillanceStationRemote_on",
 							"Label": {
-								"lang_tag": "ui7_cmd_arm",
-								"text": "Armed"
+								"lang_tag": "ui7_on",
+								"text": "ON"
 							},
-							"ControlGroup": "1",
 							"Display": {
-								"Service": "urn:micasaverde-com:serviceId:SecuritySensor1",
-								"Variable": "Armed",
+								"Service": "urn:upnp-org:serviceId:SwitchPower1",
+								"Variable": "Status",
 								"Value": "1"
 							},
 							"Command": {
-								"Service": "urn:micasaverde-com:serviceId:SecuritySensor1",
-								"Action": "SetArmed",
+								"Service": "urn:upnp-org:serviceId:SwitchPower1",
+								"Action": "SetTarget",
 								"Parameters": [
 									{
-										"Name": "newArmedValue",
+										"Name": "newTargetValue",
 										"Value": "1"
 									}
 								]
-							},
-							"ControlCode": "SSR_Armed"
+							}
 						}
 					],
 					"Display": {
@@ -146,17 +128,20 @@
 					}
 				},
 				{
-					"ControlGroup": "2",
+					"ControlGroup": 1,
+					"ControlType": "spacer",
+					"HorizontalMultiplier": 0.7
+				},
+				{
+					"ControlGroup": 1,
 					"ControlType": "multi_state_button",
-					"top": "0",
-					"left": "1",
 					"states": [
 						{
+							"ControlCode": "record_off",
 							"Label": {
 								"lang_tag": "ui7_cmd_stop",
 								"text": "Stop"
 							},
-							"ControlGroup": "2",
 							"Display": {
 								"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
 								"Variable": "Record",
@@ -171,15 +156,14 @@
 										"Value": "0"
 									}
 								]
-							},
-							"ControlCode": "record_off"
+							}
 						},
 						{
+							"ControlCode": "record_on",
 							"Label": {
 								"lang_tag": "ui7_btn_record",
 								"text": "REC"
 							},
-							"ControlGroup": "2",
 							"Display": {
 								"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
 								"Variable": "Record",
@@ -194,8 +178,7 @@
 										"Value": "1"
 									}
 								]
-							},
-							"ControlCode": "record_on"
+							}
 						}
 					],
 					"Display": {
@@ -204,16 +187,16 @@
 					}
 				},
 				{
-					"ControlGroup": "3",
+					"ControlGroup": 1,
+					"ControlType": "line_break"
+				},
+				{
+					"ControlGroup": 1,
 					"ControlType": "variable",
-					"top": "0",
-					"left": "0",
-					"x": "3",
-					"y": "1",
 					"text_align": "left",
 					"Display": {
 						"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
-						"Variable": "LastError",
+						"Variable": "Message",
 						"Top": 100,
 						"Left": 10,
 						"Width": 300,
@@ -222,8 +205,9 @@
 				},
 				{
 					"ControlType": "button",
+					"ControlCode": "update",
 					"Label": {
-						"lang_tag": "cmd_update",
+						"lang_tag": "cmd_SurveillanceStationRemote_update",
 						"text": "Update"
 					},
 					"Display": {
@@ -236,34 +220,101 @@
 						"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
 						"Action": "Update",
 						"Parameters": []
-					},
-					"ControlCode": "update"
+					}
 				}
 			]
 		},
 		{
 			"Label": {
-				"lang_tag": "cameras",
+				"lang_tag": "ui7_SurveillanceStationRemote_cameras",
 				"text": "Cameras"
 			},
-			"Position": "1",
+			"Position": 1,
 			"TabType": "javascript",
-			"TopNavigationTab": "1",
+			"TopNavigationTab": 1,
 			"ScriptName": "J_SurveillanceStationRemote1.js",
 			"Function": "SurveillanceStationRemote.showCameras"
 		},
 		{
 			"Label":{
-				"lang_tag":"advanced",
+				"lang_tag":"ui7_advanced",
 				"text":"Advanced"
 			},
-			"Position":"2",
-			"TabType":"javascript",
-			"ScriptName":"shared.js",
-			"Function":"advanced_device"
+			"Position": 2,
+			"TabType": "javascript",
+			"ScriptName": "shared.js",
+			"Function": "advanced_device"
+		},
+		{
+			"Label": {
+				"lang_tag": "ui7_logs",
+				"text": "Logs"
+			},
+			"Position": 3,
+			"TabType": "javascript",
+			"ScriptName": "shared.js",
+			"Function": "device_logs"
+		},
+		{
+			"Label": {
+				"lang_tag": "ui7_notifications",
+				"text": "Notifications"
+			},
+			"Position": 4,
+			"TabType": "javascript",
+			"ScriptName": "shared.js",
+			"Function": "device_notifications"
+		},
+		{
+			"Label": {
+				"lang_tag": "ui7_device_scenes",
+				"text": "Scenes"
+			},
+			"Position": 5,
+			"TabType": "javascript",
+			"ScriptName": "shared.js",
+			"Function": "device_scenes"
 		}
 	],
 	"eventList2":[
+		{
+			"id": 1,
+			"label": {
+				"lang_tag": "ui7_SurveillanceStationRemote_has_com_failure_on_off",
+				"text": "A device has a communication failure or not"
+			},
+			"serviceId": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+			"argumentList": [
+				{
+					"id": 1,
+					"dataType": "boolean",
+					"defaultValue": "1",
+					"allowedValueList": [
+						{
+							"Off": "0",
+							"HumanFriendlyText": {
+								"lang_tag": "ui7_SurveillanceStationRemote_has_no_more_com_failure",
+								"text": "Whenever the _DEVICE_NAME_ has no more a communication failure"
+							}
+						},
+						{
+							"On": "1",
+							"HumanFriendlyText": {
+								"lang_tag": "ui7_SurveillanceStationRemote_has_com_failure",
+								"text": "Whenever the _DEVICE_NAME_ has a communication failure"
+							}
+						}
+					],
+					"name": "CommFailure",
+					"comparisson": "=",
+					"prefix": {
+						"lang_tag": "ui7_which_mode",
+						"text": "Which mode"
+					},
+					"suffix": {}
+				}
+			]
+		},
 	],
 	"DeviceType":"urn:schemas-upnp-org:device:SurveillanceStationRemote:1"
 }

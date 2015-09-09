@@ -7,34 +7,34 @@
 	<serviceStateTable>
 		<stateVariable>
 			<name>Protocol</name>
-			<sendEventsAttribute>yes</sendEventsAttribute>
+			<sendEventsAttribute>no</sendEventsAttribute>
 			<dataType>string</dataType>
 			<defaultValue>http</defaultValue>
 			<shortCode>protocol</shortCode>
 		</stateVariable>
 		<stateVariable>
 			<name>Host</name>
-			<sendEventsAttribute>yes</sendEventsAttribute>
+			<sendEventsAttribute>no</sendEventsAttribute>
 			<dataType>string</dataType>
 			<defaultValue>diskstation</defaultValue>
 			<shortCode>host</shortCode>
 		</stateVariable>
 		<stateVariable>
 			<name>Port</name>
-			<sendEventsAttribute>yes</sendEventsAttribute>
+			<sendEventsAttribute>no</sendEventsAttribute>
 			<dataType>string</dataType>
 			<defaultValue>5000</defaultValue>
 			<shortCode>port</shortCode>
 		</stateVariable>
 		<stateVariable>
 			<name>UserName</name>
-			<sendEventsAttribute>yes</sendEventsAttribute>
+			<sendEventsAttribute>no</sendEventsAttribute>
 			<dataType>string</dataType>
 			<shortCode>username</shortCode>
 		</stateVariable>
 		<stateVariable>
 			<name>Password</name>
-			<sendEventsAttribute>yes</sendEventsAttribute>
+			<sendEventsAttribute>no</sendEventsAttribute>
 			<dataType>string</dataType>
 			<shortCode>password</shortCode>
 		</stateVariable>
@@ -52,27 +52,70 @@
 			<shortCode>cameras</shortCode>
 		</stateVariable>
 		<stateVariable>
-			<name>ARG_cameraIds</name>
+			<name>Message</name>
+			<sendEventsAttribute>yes</sendEventsAttribute>
+			<dataType>string</dataType>
+			<shortCode>message</shortCode>
+		</stateVariable>
+		<stateVariable>
+			<name>Options</name>
+			<sendEventsAttribute>no</sendEventsAttribute>
+			<dataType>string</dataType>
+			<defaultValue></defaultValue>
+		</stateVariable>
+		<stateVariable>
+			<name>CommFailure</name>
+			<sendEventsAttribute>yes</sendEventsAttribute>
+			<dataType>string</dataType>
+			<shortCode>commfailure</shortCode>
+		</stateVariable>
+		<stateVariable>
+			<name>CommFailureTime</name>
+			<sendEventsAttribute>yes</sendEventsAttribute>
+			<dataType>string</dataType>
+			<shortCode>commfailuretime</shortCode>
+		</stateVariable>
+		<stateVariable>
+			<name>LastError</name>
+			<sendEventsAttribute>yes</sendEventsAttribute>
+			<dataType>string</dataType>
+			<shortCode>lasterror</shortCode>
+		</stateVariable>
+		<stateVariable>
+			<name>A_ARG_TYPE_Target</name>
+			<sendEventsAttribute>no</sendEventsAttribute>
+			<dataType>boolean</dataType>
+			<defaultValue>0</defaultValue>
+		</stateVariable>
+		<stateVariable>
+			<name>A_ARG_TYPE_cameraIds</name>
+			<sendEventsAttribute>no</sendEventsAttribute>
+			<dataType>string</dataType>
+		</stateVariable>
+		<stateVariable>
+			<name>A_ARG_TYPE_eventId</name>
 			<sendEventsAttribute>no</sendEventsAttribute>
 			<dataType>string</dataType>
 		</stateVariable>
 	</serviceStateTable>
 	<actionList>
+		<!-- Enable -->
 		<action>
-			<name>SetArmed</name>
+			<name>SetTarget</name>
 			<argumentList>
 				<argument>
 					<name>newTargetValue</name>
 					<direction>in</direction>
-					<relatedStateVariable>Status</relatedStateVariable>
+					<relatedStateVariable>A_ARG_TYPE_Target</relatedStateVariable>
 				</argument>
 				<argument>
 					<name>cameraIds</name>
 					<direction>in</direction>
-					<relatedStateVariable>ARG_cameraIds</relatedStateVariable>
+					<relatedStateVariable>A_ARG_TYPE_cameraIds</relatedStateVariable>
 				</argument>
 			</argumentList>
 		</action>
+		<!-- Record -->
 		<action>
 			<name>SetRecordTarget</name>
 			<argumentList>
@@ -84,13 +127,36 @@
 				<argument>
 					<name>cameraIds</name>
 					<direction>in</direction>
-					<relatedStateVariable>ARG_cameraIds</relatedStateVariable>
+					<relatedStateVariable>A_ARG_TYPE_cameraIds</relatedStateVariable>
 				</argument>
 			</argumentList>
 		</action>
+		<!-- Trigger external event -->
+		<action>
+			<name>TriggerExternalEvent</name>
+			<argumentList>
+				<argument>
+					<name>eventId</name>
+					<direction>in</direction>
+					<relatedStateVariable>A_ARG_TYPE_eventId</relatedStateVariable>
+				</argument>
+			</argumentList>
+		</action>
+		<!-- Update -->
 		<action>
 			<name>Update</name>
 			<argumentList>
+			</argumentList>
+		</action>
+		<!-- Options -->
+		<action>
+			<name>SetOptions</name>
+			<argumentList>
+				<argument>
+					<name>newOptions</name>
+					<direction>in</direction>
+					<relatedStateVariable>Options</relatedStateVariable>
+				</argument>
 			</argumentList>
 		</action>
 	</actionList>

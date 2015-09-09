@@ -3,33 +3,86 @@
 	<files>L_SurveillanceStationRemote1.lua</files>
 	<startup>startup</startup>
 	<actionList>
+		<!-- Enable -->
 		<action>
-			<serviceId>urn:micasaverde-com:serviceId:SecuritySensor1</serviceId>
-			<name>SetArmed</name>
+			<serviceId>urn:upnp-org:serviceId:SwitchPower1</serviceId>
+			<name>SetTarget</name>
 			<job>
-				return setArmed(lul_device, lul_settings)
+				setTarget(lul_device, lul_settings)
+				return 4, nil
 			</job>
 		</action>
+		<action>
+			<serviceId>urn:upnp-org:serviceId:SwitchPower1</serviceId>
+			<name>GetTarget</name>
+			<run>
+				luup.variable_get("urn:upnp-org:serviceId:SwitchPower1", "Status", lul_device)
+			</run>
+		</action>
+		<action>
+			<serviceId>urn:upnp-org:serviceId:SwitchPower1</serviceId>
+			<name>GetStatus</name>
+			<run>
+				luup.variable_get("urn:upnp-org:serviceId:SwitchPower1", "Status", lul_device)
+			</run>
+		</action>
+		<!-- Enable with camera list -->
 		<action>
 			<serviceId>urn:upnp-org:serviceId:serviceId:SurveillanceStationRemote1</serviceId>
-			<name>SetArmed</name>
+			<name>setTarget</name>
 			<job>
-				return setArmed(lul_device, lul_settings)
+				setTarget(lul_device, lul_settings)
+				return 4, nil
 			</job>
 		</action>
+		<action>
+			<serviceId>urn:upnp-org:serviceId:SurveillanceStationRemote1</serviceId>
+			<name>GetTarget</name>
+			<run>
+				luup.variable_get("urn:upnp-org:serviceId:SurveillanceStationRemote1", "Status", lul_device)
+			</run>
+		</action>
+		<action>
+			<serviceId>urn:upnp-org:serviceId:SurveillanceStationRemote1</serviceId>
+			<name>GetStatus</name>
+			<run>
+				luup.variable_get("urn:upnp-org:serviceId:SurveillanceStationRemote1", "Status", lul_device)
+			</run>
+		</action>
+		<!-- Record -->
 		<action>
 			<serviceId>urn:upnp-org:serviceId:SurveillanceStationRemote1</serviceId>
 			<name>SetRecordTarget</name>
 			<job>
-				return setRecordTarget(lul_device, lul_settings)
+				setRecordTarget(lul_device, lul_settings)
+				return 4, nil
 			</job>
 		</action>
+		<!-- Trigger external event -->
+		<action>
+			<serviceId>urn:upnp-org:serviceId:SurveillanceStationRemote1</serviceId>
+			<name>TriggerExternalEvent</name>
+			<job>
+				triggerExternalEvent(lul_device, lul_settings)
+				return 4, nil
+			</job>
+		</action>
+		<!-- Update -->
 		<action>
 			<serviceId>urn:upnp-org:serviceId:SurveillanceStationRemote1</serviceId>
 			<name>Update</name>
 			<job>
-				return update(lul_device, lul_settings)
+				update(lul_device, lul_settings)
+				return 4, nil
 			</job>
+		</action>
+		<!-- Options -->
+		<action>
+			<serviceId>urn:upnp-org:serviceId:VirtualAlarmPanel1</serviceId>
+			<name>SetOptions</name>
+			<run>
+				setOptions(lul_device, lul_settings)
+			</run>
 		</action>
 	</actionList>
 </implementation>

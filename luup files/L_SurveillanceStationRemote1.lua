@@ -3,65 +3,84 @@ local json = require("dkjson")
 if (type(json) == "string") then
 	json = require("json")
 end
-local http = require("socket.http")
 
--- Plugin constants
-local SID_SurveillanceStationRemote = "urn:upnp-org:serviceId:SurveillanceStationRemote1"
-local SID_SecuritySensor = "urn:micasaverde-com:serviceId:SecuritySensor1"
+local http = require("socket.http")
+local ltn12 = require("ltn12")
+
+-------------------------------------------
+-- Constants
+-------------------------------------------
+
+local SID = {
+	SurveillanceStationRemote = "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+	SwitchPower = "urn:upnp-org:serviceId:SwitchPower1",
+	HaDevice = "urn:micasaverde-com:serviceId:HaDevice1"
+}
 
 -- Synology API Error Code
 local API_ERROR_CODE = {
 	["common"] = {
-		[100] = "Unknown error",
-		[101] = "Invalid parameters",
-		[102] = "API does not exist",
-		[103] = "Method does not exist",
-		[104] = "This API version is not supported",
-		[105] = "Insufficient user privilege",
-		[106] = "Connection time out",
-		[107] = "Multiple login detected"
+		[100] = {"Unknown error", false},
+		[101] = {"Invalid parameters", false},
+		[102] = {"API does not exist", true},
+		[103] = {"Method does not exist", true},
+		[104] = {"This API version is not supported", true},
+		[105] = {"Insufficient user privilege", false}, -- test
+		[106] = {"Connection time out", false},
+		[107] = {"Multiple login detected", false}
 	},
 	["SYNO.API.Auth"] = {
-		[100] = "Unknown error",
-		[101] = "The account parameter is not specified",
-		[400] = "Invalid password",
-		[401] = "Guest or disabled account",
-		[402] = "Permission denied",
-		[403] = "One time password not specified",
-		[404] = "One time password authenticate failed"
+		[100] = {"Unknown error", false},
+		[101] = {"The account parameter is not specified", true},
+		[400] = {"Invalid password", true},
+		[401] = {"Guest or disabled account", true},
+		[402] = {"Permission denied", false},
+		[403] = {"One time password not specified", true},
+		[404] = {"One time password authenticate failed", true}
 	},
 	["SYNO.SurveillanceStation.Camera"] = {
-		[400] = "Execution failed",
-		[401] = "Parameter invalid",
-		[402] = "Camera disabled"
+		[400] = {"Execution failed", false},
+		[401] = {"Parameter invalid", false},
+		[402] = {"Camera disabled", false},
+		[407] = {"CMS closed", false}
 	},
-	["SYNO.SurveillanceStation.PTZ"] = {
-		[400] = "Execution failed",
-		[401] = "Parameter invalid",
-		[402] = "Camera disabled"
+	["SYNO.SurveillanceStation.ExternalEvent"] = {
+		-- ???
 	},
 	["SYNO.SurveillanceStation.ExternalRecording"] = {
-		[400] = "Execution failed",
-		[401] = "Parameter invalid",
-		[402] = "Camera disabled"
+		[400] = {"Execution failed", false},
+		[401] = {"Parameter invalid", false},
+		[402] = {"Camera disabled", false}
+	},
+	["SYNO.SurveillanceStation.PTZ"] = {
+		[400] = {"Execution failed", false},
+		[401] = {"Parameter invalid", false},
+		[402] = {"Camera disabled", false}
 	}
 }
+
+-------------------------------------------
+-- Plugin constants
+-------------------------------------------
+
+local PLUGIN_NAME = "SurveillanceStationRemote"
+local PLUGIN_VERSION = "0.61"
+local REQUEST_TIMEOUT = 10
+local NB_MAX_RETRY = 2
+local PING_INTERVAL = 60
 
 -------------------------------------------
 -- Plugin variables
 -------------------------------------------
 
-local PLUGIN_NAME = "SurveillanceStationRemote"
-local PLUGIN_VERSION = "0.7"
-local REQUEST_TIMEOUT = 10
-local pluginsParam = {}
+local pluginParams = {}
 
 -------------------------------------------
 -- UI compatibility
 -------------------------------------------
 
 -- Update static JSON file
-local function updateStaticJSONFile (pluginName)
+function updateStaticJSONFile (lul_device, pluginName)
 	local isUpdated = false
 	if (luup.version_branch ~= 1) then
 		luup.log("ERROR - Plugin '" .. pluginName .. "' - checkStaticJSONFile : don't know how to do with this version branch " .. tostring(luup.version_branch), 1)
@@ -90,44 +109,111 @@ function getVariableOrInit (lul_device, serviceId, variableName, defaultValue)
 	return value
 end
 
-local function log(methodName, text, level)
+-- Set variable value if modified
+function setVariable (lul_device, serviceId, variableName, value)
+	local formerValue = luup.variable_get(serviceId, variableName, lul_device)
+	if (value ~= formerValue) then
+		luup.variable_set(serviceId, variableName, value, lul_device)
+	end
+end
+
+function log(methodName, text, level)
 	luup.log("(" .. PLUGIN_NAME .. "::" .. tostring(methodName) .. ") " .. tostring(text), (level or 50))
 end
 
-local function error(methodName, text)
+function error(methodName, text)
 	log(methodName, "ERROR: " .. tostring(text), 1)
 end
 
-local function warning(methodName, text)
+function warning(methodName, text)
 	log(methodName, "WARNING: " .. tostring(text), 2)
 end
 
-local function debug(methodName, text)
-	if (pluginParams.debug) then
+function debug(methodName, text)
+	if (pluginParams.debugMode) then
 		log(methodName, "DEBUG: " .. tostring(text))
 	end
+end
+
+-- Change debug level log
+function onDebugValueIsUpdated (lul_device, lul_service, lul_variable, lul_value_old, lul_value_new)
+	if (tonumber(lul_value_new) > 0) then
+		log("onDebugValueIsUpdated", "Enable debug mode")
+		pluginParams.debugMode = true
+	else
+		log("onDebugValueIsUpdated", "Disable debug mode")
+		pluginParams.debugMode = false
+	end
+end
+
+-------------------------------------------
+-- Display on UI functions
+-------------------------------------------
+
+-- Show message on UI
+function showMessageOnUI (lul_device, message)
+	setVariable(lul_device, SID.SurveillanceStationRemote, "Message", tostring(message))
+end
+
+-- Show error on UI (and add to previous error)
+function showErrorOnUI (methodName, lul_device, message, hasToSave)
+	if (pluginParams.lastError ~= "") then
+		pluginParams.lastError = pluginParams.lastError .. " / " .. tostring(message)
+	else
+		pluginParams.lastError = tostring(message)
+	end
+	error(methodName, pluginParams.lastError)
+	showMessageOnUI(lul_device, "<font color=\"red\">" .. tostring(pluginParams.lastError) .. "</font>")
+	if hasToSave then
+		setVariable(lul_device, SID.SurveillanceStationRemote, "LastError", tostring(message))
+	end
+end
+
+-- Show Surveillance Station status on UI
+function showStatusOnUI (lul_device)
+	local cameraIds = ""
+	for _, camera in pairs(pluginParams.cameras) do
+		cameraIds = cameraIds .. ' <span style="'
+		if ((camera.status == 0) or (camera.status == 2)) then
+			-- Enabled
+			cameraIds = cameraIds .. 'font-weight:bold;'
+		elseif ((camera.status == 1) or (camera.status == 3)) then
+			-- Disabled
+			cameraIds = cameraIds .. 'text-decoration:line-through;'
+		else
+			-- Problem on camera
+			cameraIds = cameraIds .. 'color:red;'
+		end
+		if (camera.recStatus == 6) then
+			cameraIds = cameraIds .. 'color:white;background:red;'
+		elseif (camera.recStatus > 0) then
+			cameraIds = cameraIds .. 'color:white;background:orange;'
+		end
+		
+		cameraIds = cameraIds .. '">' .. camera.id .. '</span>'
+	end
+	local message = "<div>"
+	message = message .. '<div>SS ' .. tostring(pluginParams.apiVersion) .. '</div>'
+	message = message .. '<div style="color:gray;font-size:.7em;text-align:left;">' ..
+							'<div>Camera ids:' .. cameraIds .. '</div> ' ..
+							'<div>Licence: ' .. tostring(pluginParams.quota.iKeyUsed) .. "/" .. tostring(pluginParams.quota.iKeyTotal) .. '</div>' ..
+							'<div>Last update: ' .. os.date('%Y/%m/%d %X', (tonumber(luup.variable_get(SID.SurveillanceStationRemote, "LastUpdate", lul_device) or 0))) .. '</div> ' ..
+						'</div>'
+	if (pluginParams.debugMode) then
+		message = message .. '<div style="color:gray;font-size:.7em;text-align:left;">Debug enabled</div>'
+	end
+	message = message .. '</div>'
+	showMessageOnUI(lul_device, message)
 end
 
 -------------------------------------------
 -- Plugin functions
 -------------------------------------------
 
-local function setMessage (lul_device, message)
-	luup.variable_set(SID_SurveillanceStationRemote, "LastError", tostring(message), lul_device)
-end
---
-local function setLastError (lul_device, lastError)
-	if (pluginParams.lastError ~= "") then
-		pluginParams.lastError = pluginParams.lastError .. " / " .. tostring(lastError)
-	else
-		pluginParams.lastError = tostring(lastError)
-	end
-	error("setLastError", pluginParams.lastError)
-	luup.variable_set(SID_SurveillanceStationRemote, "LastError", pluginParams.lastError, lul_device)
-end
-
 -- Request Synology API
-local function requestAPI (lul_device, apiName, method, version, parameters)
+-- http://stackoverflow.com/questions/11167289/simulation-login-using-lua
+-- https://code.google.com/p/facepunch-lua-sdk/source/browse/trunk/connectors/luasocket.lua?spec=svn46&r=46
+function requestAPI (lul_device, apiName, method, version, parameters)
 	-- Construct url
 	local url = pluginParams.protocol .. "://" .. pluginParams.host
 	if (pluginParams.port ~= "") then
@@ -146,9 +232,9 @@ local function requestAPI (lul_device, apiName, method, version, parameters)
 	-- Method and version
 	url = url .. "?api=" .. apiName .. "&method=" .. method .. "&version=" .. version
 	-- Add session id if defined
-	if (pluginParams.sessionId ~= nil) then
-		url = url .. "&_sid=" .. pluginParams.sessionId
-	end
+	--if (pluginParams.sessionId ~= nil) then
+	--	url = url .. "&_sid=" .. pluginParams.sessionId
+	--end
 	-- Optionnal parameters
 	if (parameters ~= nil) then
 		for parameterName, value in pairs(parameters) do
@@ -158,36 +244,81 @@ local function requestAPI (lul_device, apiName, method, version, parameters)
 
 	debug("requestAPI", "Call : " .. url)
 
-	-- Call Synology API
 	local data = {}
-	local status, response = luup.inet.wget(url, REQUEST_TIMEOUT)
-	--local response, status = http.request(url)
-	debug("requestAPI", "Response status : " .. tostring(status))
-	if (status ~= 0) then
-	--if (response == nil) then
-		-- HTTP error
-		setLastError(lul_device, "HTTP error: " .. tostring(status))
-	else
-		response = response:gsub("%[%]","[null]")
-		local decodeSuccess, jsonResponse = pcall(json.decode, response)
-		if (not decodeSuccess) then
-			setLastError(lul_device, "Response decode error: " .. tostring(jsonResponse))
-			debug("requestAPI", "Response: " .. tostring(response))
+	local status = -1
+	local response
+	local b, code, headers = -1, ""
+	local requestBody = {}
+	local responseBody = {}
+	local nbTry = 0
+	local isFatalError = false
+	while ((status ~= 0) and not isFatalError and (nbTry < pluginParams.nbMaxRetry)) do
+		-- Call Synology API
+		--status, response = luup.inet.wget(url, pluginParams.requestTimeout)
+		--local response, status = http.request(url)
+		--response, code, responseHeaders = http.request({
+		-- code == 200
+		response = {}
+		b, code, headers = http.request({
+			url = url,
+			--source = ltn12.source.string(requestBody),
+			headers = {
+				cookie = "id=" .. tostring(pluginParams.sessionId)
+			},
+  			sink = ltn12.sink.table(response)
+		})
+		--debug("requestAPI", "Response status : " .. tostring(status))
+		debug("requestAPI", "Response b:" .. tostring(b) .. " - code: " .. tostring(code))
+		if ((not b) or (code ~= 200)) then
+			-- HTTP error
+			showErrorOnUI("requestAPI", lul_device, "HTTP error - code:" .. tostring(code) .. " - response:" .. tostring(response), true)
 		else
-			if (jsonResponse.success) then
-				status = 0
-				data = jsonResponse.data
-				--debug("requestAPI", "Data: " .. json.encode(data))
-			else
-				-- API error
-				status = -1
-				local errorCode, errorMessage = tonumber(jsonResponse.error.code), "unkown"
-				if ((API_ERROR_CODE[apiName] ~= nil) and (API_ERROR_CODE[apiName][errorCode] ~= nil)) then
-					errorMessage = API_ERROR_CODE[apiName][errorCode]
-				elseif (API_ERROR_CODE["common"][errorCode] ~= nil) then
-					errorMessage = API_ERROR_CODE["common"][errorCode]
+			--debug("requestAPI", "Response  : " .. json.encode(response))
+			-- Search sessionId in cookie if exist
+			--pluginParams.sessionId = nil
+			for k, v in pairs(headers) do
+				--debug("requestAPI", "Response header : " .. tostring(k) .. "=" .. tostring(v))
+				if (k == "set-cookie") then
+					pluginParams.sessionId = string.match(v, "id=([^;,]*)")
+					break
 				end
-				setLastError(lul_device, "API error: "  .. tostring(errorMessage) .. " (" .. tostring(errorCode) .. ")")
+			end
+			debug("requestAPI", "Session Id: " .. tostring(pluginParams.sessionId))
+
+			response = table.concat(response, "")
+			response = response:gsub("%[%]","[null]") -- Trick for library "json.lua" (UI5)
+			local decodeSuccess, jsonResponse = pcall(json.decode, response)
+			if (not decodeSuccess) then
+				showErrorOnUI("requestAPI", lul_device, "Response decode error: " .. tostring(jsonResponse), true)
+				debug("requestAPI", "Response: " .. tostring(response))
+			else
+--debug("requestAPI", "jsonResponse: " .. json.encode(jsonResponse))
+				if (jsonResponse.success) then
+					status = 0
+					data = jsonResponse.data
+					debug("requestAPI", "Data: " .. json.encode(data))
+				else
+					-- API error
+					status = -1
+					local errorCode, errorMessage = tonumber(jsonResponse.error.code), "unkown"
+					if ((API_ERROR_CODE[apiName] ~= nil) and (API_ERROR_CODE[apiName][errorCode] ~= nil)) then
+						errorMessage = API_ERROR_CODE[apiName][errorCode][1]
+						isFatalError = API_ERROR_CODE[apiName][errorCode][2]
+					elseif (API_ERROR_CODE["common"][errorCode] ~= nil) then
+						errorMessage = API_ERROR_CODE["common"][errorCode][1]
+						isFatalError = API_ERROR_CODE[apiName][errorCode][2]
+					end
+					showErrorOnUI("requestAPI", lul_device, "API error: "  .. tostring(errorMessage) .. " (" .. tostring(errorCode) .. ")", false)
+				end
+			end
+		end
+		if not isFatalError then
+			nbTry = nbTry + 1
+			if ((status ~= 0) and (nbTry < pluginParams.nbMaxRetry)) then
+				luup.sleep(5000)
+				debug("requestAPI", "retry #" .. tostring(nbTry))
+				resetError()
+				showErrorOnUI("requestAPI", lul_device, "Retry #" .. tostring(nbTry), false)
 			end
 		end
 	end
@@ -196,9 +327,10 @@ local function requestAPI (lul_device, apiName, method, version, parameters)
 end
 
 -- Query APIs’ information (no login required)
-local function retrieveApiInfo (lul_device)
+function retrieveApiInfo (lul_device)
 	local status, data = requestAPI(lul_device, "SYNO.API.Info", "Query", 1, {
-		query = "SYNO.API.Auth,SYNO.SurveillanceStation.Info,SYNO.SurveillanceStation.Camera,SYNO.SurveillanceStation.ExternalRecording"
+		--query = "SYNO.API.Auth,SYNO.SurveillanceStation.Info,SYNO.SurveillanceStation.Camera,SYNO.SurveillanceStation.ExternalEvent,SYNO.SurveillanceStation.ExternalRecording"
+		query = "SYNO.API.Auth,SYNO.SurveillanceStation.Info,SYNO.SurveillanceStation.Camera,SYNO.SurveillanceStation.Camera.Wizard,SYNO.SurveillanceStation.ExternalEvent,SYNO.SurveillanceStation.ExternalRecording"
 	})
 	if (status == 0) then
 		if ((data["SYNO.API.Auth"].maxVersion >= 2) and (data["SYNO.SurveillanceStation.ExternalRecording"].maxVersion >= 2)) then
@@ -210,99 +342,123 @@ local function retrieveApiInfo (lul_device)
 			if (status == 0) then
 				pluginParams.apiVersion = tostring(data.version.major) .. "." .. tostring(data.version.minor) .. "-" .. tostring(data.version.build)
 				log("retrieveApiInfo", "Surveillance Station version: " .. pluginParams.apiVersion)
-				--luup.variable_set(SID_SurveillanceStationRemote, "LastError", "SS: " .. pluginParams.apiVersion, lul_device)
 			else
-				setLastError(lul_device, "Can't retrieve Surveillance Station version")
+				showErrorOnUI("retrieveApiInfo", lul_device, "Can't retrieve Surveillance Station version", true)
 			end
 
 			return true
 		else
-			setLastError(lul_device, "Synology API version is too old - DSM 4.0-2251 and Surveillance Station 6.1 are required")
+			showErrorOnUI("retrieveApiInfo", lul_device, "Synology API version is too old - DSM 4.0-2251 and Surveillance Station 6.1 are required", true)
 		end
 	else
-		setLastError(lul_device, "Can't connect to Synology host")
+		showErrorOnUI("retrieveApiInfo", lul_device, "Can't connect to Synology host", true)
 	end
 	return false
 end
 
 -- Session login
-local function login (lul_device)
+function login (lul_device)
+	debug("login", "Try to log in")
 	pluginParams.sessionId = nil
 	local status, data = requestAPI(lul_device, "SYNO.API.Auth", "Login", 2, {
 		account = pluginParams.userName,
 		passwd  = pluginParams.password,
 		session = "SurveillanceStation",
-		format  = "sid"
+		format  = "cookie"
 	})
-	if ((status == 0) and (data.sid ~= nil)) then
-		pluginParams.sessionId = data.sid
+	if ((status == 0) and (pluginParams.sessionId ~= nil)) then
 		log("login", "Session is opened - SID : " .. pluginParams.sessionId)
-		luup.sleep(1000)
 		return true
 	else
-		setLastError(lul_device, "Login failed")
+		showErrorOnUI("login", lul_device, "Login failed", false)
 		return false
 	end
 end
 
 -- Session logout
-local function logout (lul_device)
+function logout (lul_device)
+	debug("logout", "Try to log out")
 	local status, data = requestAPI(lul_device, "SYNO.API.Auth", "Logout", 2, { session = "SurveillanceStation" })
 	if (status == 0) then
 		pluginParams.sessionId = nil
 		log("logout", "Session is closed")
 		return true
 	else
-		setLastError(lul_device, "Logout failed")
+		showErrorOnUI("logout", lul_device, "Logout failed", false)
 		return false
 	end
 end
 
+-- Get quota informations
+function retrieveQuota (lul_device)
+	debug("retrieveQuota", "Retrieve quota informations")
+	local status, data = requestAPI(lul_device, "SYNO.SurveillanceStation.Camera.Wizard", "CheckQuota", 1, {})
+	if (status == 0) then
+		pluginParams.quota = {
+			localCamNum = tonumber(data.localCamNum) or 0,
+			iKeyUsed = tonumber(data.iKeyUsed) or 0,
+			iKeyTotal = tonumber(data.iKeyTotal) or 0
+		}
+		if ((pluginParams.quota.iKeyTotal == 0) or (pluginParams.quota.localCamNum > pluginParams.quota.iKeyTotal)) then
+			-- TODO : check if this can detect if the licence has expired
+			showErrorOnUI("retrieveQuota", lul_device, "Problem with licence", true)
+			return false
+		end
+		return true
+	else
+		showErrorOnUI("retrieveQuota", lul_device, "Can't get quota", false)
+		return false
+	end
+end
+
+-- 
+function updateCamerasStatuses (lul_device)
+	-- Save camera list
+	local cameraList = {}
+	for _, camera in ipairs(pluginParams.cameras) do
+		log("retrieveCameras", "Get camera #" .. tostring(camera.id) .. " '" .. camera.name .. "'")
+		table.insert(cameraList, tostring(camera.id) .. "," .. tostring(camera.name) .. "," .. tostring(camera.status) .. "," .. tostring(camera.recStatus))
+	end
+	setVariable(lul_device, SID.SurveillanceStationRemote, "Cameras", table.concat(cameraList, "|"))
+end
+
 -- Get camera list (require login)
-local function retrieveCameras (lul_device)
+function retrieveCameras (lul_device)
+	debug("retrieveCameras", "Retrieve cameras")
 	local status, data = requestAPI(lul_device, "SYNO.SurveillanceStation.Camera", "List", 2, {
-		limit = 10,
+		--limit = 10,
 		additional = "device"
 	})
 	if (status == 0) then
 		pluginParams.cameras = data.cameras
-		-- Save camera list
-		local cameraList = {}
-		for _, camera in ipairs(pluginParams.cameras) do
-			log("retrieveCameras", "Get camera #" .. tostring(camera.id) .. " '" .. camera.name .. "'")
-			table.insert(cameraList, tostring(camera.id) .. "," .. tostring(camera.name) .. "," .. tostring(camera.status) .. "," .. tostring(camera.recStatus))
-		end
-		luup.variable_set(SID_SurveillanceStationRemote, "Cameras", table.concat(cameraList, "|"), lul_device)
+		updateCamerasStatuses(lul_device)
 		return true
 	else
-		setLastError(lul_device, "Can't get camera list")
+		showErrorOnUI("retrieveCameras", lul_device, "Can't get camera list", false)
 		return false
 	end
 end
 
-local function updateStatuses (lul_device)
-	if (retrieveCameras(lul_device)) then
-		-- Compute statuses
-		local armedStatus = "1"
-		local recordStatus = "0"
-		for _, camera in pairs(pluginParams.cameras) do
-			if (tonumber(camera.status) > 0) then
-				-- At least one camera is disable
-				armedStatus = "0"
-			elseif ((armedStatus == "1") and (tonumber(camera.recStatus) == 6)) then
-				-- Device not disable ant at least one camera is recording
-				recordStatus = "1"
-			end
+-- Update statuses of Surveillance Station Remote
+function updateStatuses (lul_device)
+	-- Compute statuses
+	local status = "0"
+	local recordStatus = "0"
+	for _, camera in pairs(pluginParams.cameras) do
+		if ((camera.status == 0) or (camera.status == 2)) then
+			-- At least one camera is enabled or is about to be enabled
+			status = "1"
 		end
-		luup.variable_set(SID_SecuritySensor, "Armed", armedStatus, lul_device)
-		luup.variable_set(SID_SurveillanceStationRemote, "Record", recordStatus, lul_device)
-		return true
-	else
-		return false
+		if (camera.recStatus == 6) then
+			-- At least one camera is external recording
+			recordStatus = "1"
+		end
 	end
+	setVariable(lul_device, SID.SwitchPower, "Status", status)
+	setVariable(lul_device, SID.SurveillanceStationRemote, "Record", recordStatus)
 end
 
-local function getCameraIds (lul_device)
+function getCameraIds (lul_device)
 	local cameraIds = {}
 	for _, camera in pairs(pluginParams.cameras) do
 		table.insert(cameraIds, camera.id)
@@ -310,7 +466,27 @@ local function getCameraIds (lul_device)
 	return cameraIds
 end
 
-local function getCameraById (lul_device, cameraId)
+function getActiveCameraIds (lul_device)
+	local cameraIds = {}
+	for _, camera in pairs(pluginParams.cameras) do
+		if (camera.status == 0) then
+			table.insert(cameraIds, camera.id)
+		end
+	end
+	return cameraIds
+end
+
+function getRecordingCameraIds (lul_device)
+	local cameraIds = {}
+	for _, camera in pairs(pluginParams.cameras) do
+		if (camera.recStatus > 0) then
+			table.insert(cameraIds, camera.id)
+		end
+	end
+	return cameraIds
+end
+
+function getCameraById (lul_device, cameraId)
 	for _, camera in pairs(pluginParams.cameras) do
 		if (tonumber(camera.id) == tonumber(cameraId)) then
 			return camera
@@ -320,57 +496,102 @@ local function getCameraById (lul_device, cameraId)
 	return nil
 end
 
--- Change debug level log
-function onDebugValueIsUpdated (lul_device, lul_service, lul_variable, lul_value_old, lul_value_new)
-	if (lul_value_new == "1") then
-		log("onDebugValueIsUpdated", "Enable debug mode")
-		pluginParams.debug = true
+function setBusy (lul_device, shouldBeBusy)
+	if (not luup.is_ready(lul_device)) then
+		debug("isBusy", "Device is not ready")
+		showMessageOnUI(lul_device, "Device is not ready...")
+		return false
+	end
+	if (shouldBeBusy and pluginParams.isBusy) then
+		debug("isBusy", "Still processing")
+		showMessageOnUI(lul_device, "Still processing...")
+		return false
+	end
+	pluginParams.isBusy = shouldBeBusy
+	return true
+end
+
+function resetError ()
+	pluginParams.lastError = ""
+	setVariable(lul_device, SID.SurveillanceStationRemote, "LastError", "")
+end
+
+function handleError (lul_device)
+	if (pluginParams.lastError == "") then
+		setVariable(lul_device, SID.SurveillanceStationRemote, "CommFailure", "0")
+		setVariable(lul_device, SID.SurveillanceStationRemote, "CommFailureTime", "0")
+		return false
 	else
-		log("onDebugValueIsUpdated", "Disable debug mode")
-		pluginParams.debug = false
+		setVariable(lul_device, SID.SurveillanceStationRemote, "CommFailure", "1")
+		setVariable(lul_device, SID.SurveillanceStationRemote, "CommFailureTime", os.time())
+		-- TODO
+		-- http://wiki.mios.com/index.php/Alerts
+		--http://IP:3480/data_request?id=add_alert&device=DEVICE_ID&type=3&source=3&description=ALERT_DESCRIPTION
+		local url = require("socket.url")
+		local alertDescription = "Communication issue with Surveillance station on " .. tostring(pluginParams.protocol) .. "://" .. tostring(pluginParams.host) .. ":" ..  tostring(pluginParams.port)
+		--local status, response = luup.inet.wget('/data_request?id=add_alert&device=' .. tostring(lul_device) .. '&type=3&source=3&description=' .. url.escape(alertDescription))
+
+		return true
 	end
 end
 
 -------------------------------------------
--- Job functions
+-- External event management
 -------------------------------------------
 
-function update (lul_device, lul_settings, lul_job)
-	debug("update", "Update")
-	setMessage(lul_device, "Update...")
-	pluginParams.lastError = ""
+-------------------------------------------
+-- Main functions
+-------------------------------------------
 
-	if (pluginParams.isBusy) then
-		warning("setArmed", "Last call is still in process")
+-- TODO - Disable a camera if out of order
+function setOptions (lul_device, lul_settings)
+	local options = lul_settings.newOptions or "{}"
+	local decodeSuccess, jsonOptions = pcall(json.decode, options)
+	if (not decodeSuccess) then
+		showErrorOnUI("setOptions", lul_device, "Options decode error: " .. tostring(jsonOptions))
+		debug("setOptions", "Options: " .. tostring(options))
 	else
-		pluginParams.isBusy = true
+
+	end
+end
+
+-- Update Surveillance Station informations
+function update (lul_device, lul_settings)
+	debug("update", "Update")
+	resetError()
+
+	if (not setBusy(lul_device, true)) then
+		return
 	end
 
 	if (login(lul_device)) then
-		updateStatuses(lul_device)
+		if retrieveCameras(lul_device) then
+			updateStatuses(lul_device)
+		end
 		logout(lul_device)
 	end
-
-	if (pluginParams.lastError == "") then
-		luup.variable_set(SID_SurveillanceStationRemote, "LastError", "SS: " .. pluginParams.apiVersion, lul_device)
+	if (not handleError(lul_device)) then
+		setVariable(lul_device, SID.SurveillanceStationRemote, "LastUpdate", os.time())
+		showStatusOnUI(lul_device)
 	end
 
-	pluginParams.isBusy = false
-	return 4, nil
+	setBusy(lul_device, false)
 end
 
 -- Enable or disable cameras (list or all)
-function setArmed (lul_device, lul_settings, lul_job)
+function setTarget (lul_device, lul_settings)
 	local method, cameraIdList
+	resetError()
 
-	if (pluginParams.isBusy) then
-		setMessage(lul_device, "Last call is still in process...")
-	else
-		pluginParams.isBusy = true
+	if (not setBusy(lul_device, true)) then
+		-- TODO : request queue
+		showMessageOnUI(lul_device, "Remote is busy...")
+		handleError(lul_device)
+		return
 	end
 
 	-- Method name
-	if ((lul_settings.newArmedValue ~= nil) and (tostring(lul_settings.newArmedValue) == "0")) then
+	if ((lul_settings.newTargetValue ~= nil) and (tostring(lul_settings.newTargetValue) == "0")) then
 		method = "Disable"
 	else
 		method = "Enable"
@@ -379,86 +600,139 @@ function setArmed (lul_device, lul_settings, lul_job)
 	cameraIdList = lul_settings.cameraIds or lul_settings.cameraId or table.concat(getCameraIds(lul_device), ",")
 
 	debug("setTarget", method .. " camera(s) #" .. tostring(cameraIdList))
-	setMessage(lul_device, method .. " camera(s) #" .. tostring(cameraIdList) .. "...")
-	pluginParams.lastError = ""
+	showMessageOnUI(lul_device, method .. " camera(s) #" .. tostring(cameraIdList) .. "...")
 	if (login(lul_device)) then
 		local status, data = requestAPI(lul_device, "SYNO.SurveillanceStation.Camera", method, 3, {
 			cameraIds = tostring(cameraIdList)
 		})
 		if (status == 0) then
+			-- Update the status of the cameras
+			if (type(data.data.camera) == "table") then
+				for _, dataCamera in pairs(data.data.camera) do
+					local camera = getCameraById(lul_device, dataCamera.id)
+					if (camera ~= nil) then
+						if dataCamera.enabled then
+							camera.status = 0
+						else
+							camera.status = 1
+						end
+					end
+				end
+			end
+			--retrieveCameras(lul_device)
 			updateStatuses(lul_device)
+			updateCamerasStatuses(lul_device)
 		end
 		logout(lul_device)
 	end
-
-	if (pluginParams.lastError == "") then
-		setMessage(lul_device, "SS: " .. pluginParams.apiVersion)
+	if (not handleError(lul_device)) then
+		setVariable(lul_device, SID.SurveillanceStationRemote, "LastUpdate", os.time())
+		showStatusOnUI(lul_device)
 	end
 
-	pluginParams.isBusy = false
-	return 4, nil
+	setBusy(lul_device, false)
 end
 
 -- Start or stop external record on one camera
 function setRecordTarget (lul_device, lul_settings)
-	local result = false
 	local deviceStatus, action
 	local cameraIds
 
-	if (pluginParams.isBusy) then
-		warning("setArmed", "Last call is still in process")
-	else
-		pluginParams.isBusy = true
+	if (not setBusy(lul_device, true)) then
+		return
 	end
 
-	if (luup.variable_get(SID_SecuritySensor, "Armed", lul_device) ~= "1") then
+	if (luup.variable_get(SID.SwitchPower, "Status", lul_device) ~= "1") then
 		debug("setRecordTarget", "Device is disable : do nothing")
+		showMessageOnUI(lul_device, "Device is disable : do nothing")
+		return
+	end
+
+	-- Action name
+	if (tostring(lul_settings.newRecordTargetValue) == "1") then
+		action = "start"
 	else
-		-- Action name
-		if (tostring(lul_settings.newRecordTargetValue) == "1") then
-			action = "start"
-			recordStatus = "1"
-		else
-			action = "stop"
-			recordStatus = "0"
-		end
-		-- Camera ids
-		if (lul_settings.cameraId ~= nil) then
-			--cameraIds = { [[lul_settings.cameraId]] }
-			local cameraId = lul_settings.cameraId
-			cameraIds = { cameraId }
-		else
-			cameraIds = getCameraIds(lul_device)
-		end
+		action = "stop"
+	end
+	-- Camera ids
+	if (lul_settings.cameraId ~= nil) then
+		--cameraIds = { [[lul_settings.cameraId]] }
+		local cameraId = lul_settings.cameraId
+		cameraIds = { cameraId }
+	else
+		cameraIds = getCameraIds(lul_device)
+	end
 
-		setMessage(lul_device, action .. " record for camera(s) #" .. tostring(table.concat(cameraIds, ",")) .. "...")
-		pluginParams.lastError = ""
-
-		if (login(lul_device)) then
-			for _, cameraId in pairs(cameraIds) do
-				debug("setRecordTarget", action .. " record for camera #" .. tostring(cameraId))
-				local status, data = requestAPI(lul_device, "SYNO.SurveillanceStation.ExternalRecording", "Record", 2, {
-					cameraId = cameraId,
-					action = action
-				})
-				if (status == 0) then
-					result = true
+	showMessageOnUI(lul_device, action .. " record for camera(s) #" .. tostring(table.concat(cameraIds, ",")) .. "...")
+	resetError()
+	if (login(lul_device)) then
+		local result = true
+		for _, cameraId in pairs(cameraIds) do
+			debug("setRecordTarget", action .. " record for camera #" .. tostring(cameraId))
+			local status, data = requestAPI(lul_device, "SYNO.SurveillanceStation.ExternalRecording", "Record", 2, {
+				cameraId = cameraId,
+				action = action
+			})
+			if (status ~= 0) then
+				result = false
+				break
+			else
+				local camera = getCameraById(lul_device, cameraId)
+				if (action == "start") then
+					camera.recStatus = 6
+				else
+					camera.recStatus = 0
 				end
 			end
-			if (result) then
-				luup.variable_set(SID_SurveillanceStationRemote, "Record", recordStatus, lul_device)
+		end
+		if (result) then
+			if (table.getn(getRecordingCameraIds(lul_device)) > 0) then
+				setVariable(lul_device, SID.SurveillanceStationRemote, "Record", "1")
+			else
+				setVariable(lul_device, SID.SurveillanceStationRemote, "Record", "1")
 			end
-			--updateStatuses(lul_device)) then
-			logout(lul_device)
 		end
-
-		if (pluginParams.lastError == "") then
-			setMessage(lul_device, "SS: " .. pluginParams.apiVersion)
-		end
+		logout(lul_device)
+	end
+	if (not handleError(lul_device)) then
+		setVariable(lul_device, SID.SurveillanceStationRemote, "LastUpdate", os.time())
+		showStatusOnUI(lul_device)
 	end
 
-	pluginParams.isBusy = false
-	return 4, nil
+	setBusy(lul_device, false)
+end
+
+-- Trigger external event
+function triggerExternalEvent (lul_device, lul_settings)
+	local eventId = tonumber(lul_settings.eventId) or 0
+
+	if ((eventId < 1) or (eventId > 10)) then
+		showErrorOnUI("triggerExternalEvent", lul_device, "Event id '" .. tostring(lul_settings.eventId) .. "' is not in (1-10)", true)
+		return
+	end
+
+	if (not setBusy(lul_device, true)) then
+		return
+	end
+
+	debug("triggerExternalEvent", "Trigger event #" .. tostring(eventId))
+	showMessageOnUI(lul_device, "Trigger event #" .. tostring(eventId) .. "...")
+	resetError()
+	if (login(lul_device)) then
+		local status, data = requestAPI(lul_device, "SYNO.SurveillanceStation.ExternalEvent", "Trigger", 1, {
+			eventId = eventId
+		})
+		if (status == 0) then
+			-- TODO : gérer évènement non transmis
+			showMessageOnUI(lul_device, "Event #" .. tostring(eventId) .. " sent")
+		end
+		logout(lul_device)
+	end
+	if (not handleError(lul_device)) then
+		showMessageOnUI(lul_device, "Event #" .. tostring(eventId) .. " has been triggered")
+	end
+
+	setBusy(lul_device, false)
 end
 
 -------------------------------------------
@@ -470,50 +744,53 @@ function initPluginInstance (lul_device)
 	log("initPluginInstance", "Init")
 
 	local isInitialized = true
-	setMessage(lul_device, "Init plugin instance...")
 
 	-- Get plugin params for this device
-	getVariableOrInit(lul_device, SID_SecuritySensor, "Armed", "0")
-	getVariableOrInit(lul_device, SID_SurveillanceStationRemote, "Record", "0")
-	getVariableOrInit(lul_device, SID_SurveillanceStationRemote, "LastError", "")
+	getVariableOrInit(lul_device, SID.SwitchPower, "Status", "0")
+	getVariableOrInit(lul_device, SID.SurveillanceStationRemote, "Record", "0")
+	getVariableOrInit(lul_device, SID.SurveillanceStationRemote, "Message", "")
+	getVariableOrInit(lul_device, SID.SurveillanceStationRemote, "CommFailure", "0")
+	getVariableOrInit(lul_device, SID.SurveillanceStationRemote, "CommFailureTime", "0")
+	getVariableOrInit(lul_device, SID.SurveillanceStationRemote, "LastError", "")
+	getVariableOrInit(lul_device, SID.SurveillanceStationRemote, "LastUpdate", "")
 	pluginParams = {
-		deviceName = "SurveillanceStationRemote(" .. tostring(lul_device) .. ")",
-		apiInfo    = {},
-		apiVersion = "",
-		protocol   = getVariableOrInit(lul_device, SID_SurveillanceStationRemote, "Protocol", "http"),
-		host       = getVariableOrInit(lul_device, SID_SurveillanceStationRemote, "Host", "diskstation"),
-		port       = getVariableOrInit(lul_device, SID_SurveillanceStationRemote, "Port", "5000"),
-		userName   = getVariableOrInit(lul_device, SID_SurveillanceStationRemote, "UserName", ""),
-		password   = getVariableOrInit(lul_device, SID_SurveillanceStationRemote, "Password", ""),
-		cameras    = getVariableOrInit(lul_device, SID_SurveillanceStationRemote, "Cameras", ""),
-		lastError  = "",
-		debug      = (getVariableOrInit(lul_device, SID_SurveillanceStationRemote, "Debug", "0") == "1"),
-		isBusy     = false
+		apiInfo        = {},
+		apiVersion     = "",
+		protocol       = getVariableOrInit(lul_device, SID.SurveillanceStationRemote, "Protocol", "http"),
+		host           = getVariableOrInit(lul_device, SID.SurveillanceStationRemote, "Host", "diskstation"),
+		port           = getVariableOrInit(lul_device, SID.SurveillanceStationRemote, "Port", "5000"),
+		userName       = getVariableOrInit(lul_device, SID.SurveillanceStationRemote, "UserName", ""),
+		password       = getVariableOrInit(lul_device, SID.SurveillanceStationRemote, "Password", ""),
+		cameras        = getVariableOrInit(lul_device, SID.SurveillanceStationRemote, "Cameras", ""),
+		nbMaxRetry     = tonumber(getVariableOrInit(lul_device, SID.SurveillanceStationRemote, "NbMaxRetry", NB_MAX_RETRY)) or NB_MAX_RETRY,
+		requestTimeout = tonumber(getVariableOrInit(lul_device, SID.SurveillanceStationRemote, "Timeout", REQUEST_TIMEOUT)) or REQUEST_TIMEOUT,
+		debugMode      = (getVariableOrInit(lul_device, SID.SurveillanceStationRemote, "Debug", "0") == "1"),
+		isBusy         = false
 	}
+	resetError()
 
-	-- Check param
+	-- Check settings
 	if ((pluginParams.userName == "") or (pluginParams.password == "")) then
-		setLastError(lul_device, "Variables 'UserName' and 'Password' must be set")
+		showErrorOnUI("initPluginInstance", lul_device, "Variables 'UserName' and 'Password' must be set", true)
 		isInitialized = false
 	-- Try to get API infos
-	elseif (not retrieveApiInfo(lul_device)) then
-		setLastError(lul_device, "API Info KO")
-		isInitialized = false
-	-- Try to log in
-	elseif (not login(lul_device)) then
-		setLastError(lul_device, "Login KO")
-		isInitialized = false
-	-- Try to update infos
-	elseif (not updateStatuses(lul_device)) then
-		setLastError(lul_device, "Update KO")
+	elseif (
+		not retrieveApiInfo(lul_device)
+		or not login(lul_device)
+		or not retrieveQuota(lul_device)
+		or not retrieveCameras(lul_device)
+	) then
 		isInitialized = false
 	end
+	updateStatuses(lul_device)
 
 	-- Log out
 	logout(lul_device)
 
-	if (pluginParams.lastError == "") then
-		setMessage(lul_device, "SS: " .. pluginParams.apiVersion)
+	if (not handleError(lul_device)) then
+		setVariable(lul_device, SID.SurveillanceStationRemote, "LastUpdate", os.time())
+		showStatusOnUI(lul_device)
+		pluginParams.isBusy = false
 	end
 
 	return isInitialized
@@ -523,12 +800,12 @@ function startup (lul_device)
 	log("startup", "Start plugin '" .. PLUGIN_NAME .. "' (v" .. PLUGIN_VERSION .. ")")
 
 	if (type(json) == "string") then
-		setMessage(lul_device, "No JSON decoder")
+		showErrorOnUI("startup", lul_device, "No JSON decoder", true)
 		return false, "No JSON decoder"
 	end
 
 	-- Update static JSON file
-	if updateStaticJSONFile(PLUGIN_NAME .. "1") then
+	if updateStaticJSONFile(lul_device, PLUGIN_NAME .. "1") then
 		warning("startup", "'device_json' has been updated : reload LUUP engine")
 		luup.reload()
 		return false, "Reload LUUP engine"
@@ -537,13 +814,13 @@ function startup (lul_device)
 	-- Init
 	initPluginInstance(lul_device)
 
-	-- Register
-	luup.variable_watch("initPluginInstance", SID_SurveillanceStationRemote, "Protocol", lul_device)
-	luup.variable_watch("initPluginInstance", SID_SurveillanceStationRemote, "Host", lul_device)
-	luup.variable_watch("initPluginInstance", SID_SurveillanceStationRemote, "Port", lul_device)
-	luup.variable_watch("initPluginInstance", SID_SurveillanceStationRemote, "UserName", lul_device)
-	luup.variable_watch("initPluginInstance", SID_SurveillanceStationRemote, "Password", lul_device)
-	luup.variable_watch("onDebugValueIsUpdated", SID_SurveillanceStationRemote, "Debug", lul_device)
+	-- Watch setting changes
+	luup.variable_watch("initPluginInstance", SID.SurveillanceStationRemote, "Protocol", lul_device)
+	luup.variable_watch("initPluginInstance", SID.SurveillanceStationRemote, "Host", lul_device)
+	luup.variable_watch("initPluginInstance", SID.SurveillanceStationRemote, "Port", lul_device)
+	luup.variable_watch("initPluginInstance", SID.SurveillanceStationRemote, "UserName", lul_device)
+	luup.variable_watch("initPluginInstance", SID.SurveillanceStationRemote, "Password", lul_device)
+	luup.variable_watch("onDebugValueIsUpdated", SID.SurveillanceStationRemote, "Debug", lul_device)
 
 	if (luup.version_major >= 7) then
 		luup.set_failure(0, lul_device)
