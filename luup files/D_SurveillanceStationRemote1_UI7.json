@@ -46,7 +46,7 @@
 			]
 		}
 	],
-	"inScene": "1",
+	"inScene": 1,
 	"doc_url":{
 		"doc_forced_url":{
 			"text":"https://github.com/vosmont/Vera-Plugin-SurveillanceStationRemote"
@@ -60,7 +60,7 @@
 			},
 			"Position": 0,
 			"TabType": "flash",
-			"TopNavigationTab": 1,
+			"top_navigation_tab": 1,
 			"SceneGroup": [
 				{
 					"id": 1
@@ -78,7 +78,7 @@
 					"ControlType": "multi_state_button",
 					"states": [
 						{
-							"ControlCode": "SurveillanceStationRemote_off",
+							"ControlCode": "ssr_off",
 							"Label": {
 								"lang_tag": "ui7_off",
 								"text": "OFF"
@@ -100,7 +100,7 @@
 							}
 						},
 						{
-							"ControlCode": "SurveillanceStationRemote_on",
+							"ControlCode": "ssr_on",
 							"Label": {
 								"lang_tag": "ui7_on",
 								"text": "ON"
@@ -137,7 +137,7 @@
 					"ControlType": "multi_state_button",
 					"states": [
 						{
-							"ControlCode": "record_off",
+							"ControlCode": "ssr_record_off",
 							"Label": {
 								"lang_tag": "ui7_cmd_stop",
 								"text": "Stop"
@@ -159,7 +159,7 @@
 							}
 						},
 						{
-							"ControlCode": "record_on",
+							"ControlCode": "ssr_record_on",
 							"Label": {
 								"lang_tag": "ui7_btn_record",
 								"text": "REC"
@@ -191,23 +191,10 @@
 					"ControlType": "line_break"
 				},
 				{
-					"ControlGroup": 1,
-					"ControlType": "variable",
-					"text_align": "left",
-					"Display": {
-						"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
-						"Variable": "Message",
-						"Top": 100,
-						"Left": 10,
-						"Width": 300,
-						"Height": 80
-					}
-				},
-				{
 					"ControlType": "button",
 					"ControlCode": "update",
 					"Label": {
-						"lang_tag": "cmd_SurveillanceStationRemote_update",
+						"lang_tag": "cmd_ssr_update",
 						"text": "Update"
 					},
 					"Display": {
@@ -221,26 +208,151 @@
 						"Action": "Update",
 						"Parameters": []
 					}
+				},
+				{
+					"ControlGroup": 1,
+					"ControlType": "line_break"
+				},
+				{
+					"ControlGroup": 1,
+					"ControlType": "label",
+					"top": 0,
+					"left": 0,
+					"text_align": "left",
+					"Label": {
+						"lang_tag": "version",
+						"text": "Version"
+					},
+					"Display": {
+						"Top": 50,
+						"Left": 10
+					}
+				},
+				{
+					"ControlGroup": 1,
+					"ControlType": "variable",
+					"top": 0,
+					"left": 0,
+					"x": 1,
+					"text_align": "left",
+					"Display": {
+						"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+						"Variable": "PluginVersion",
+						"Top": 50,
+						"Left": 100
+					}
+				},
+				{
+					"ControlType": "label",
+					"text_align": "left",
+					"Label": {
+						"lang_tag": "last_update",
+						"text": "Last update"
+					},
+					"Display": {
+						"Top": 65,
+						"Left": 10
+					}
+				},
+				{
+					"ControlType": "variable",
+					"text_align": "left",
+					"Display": {
+						"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+						"Variable": "LastUpdate",
+						"Top": 65,
+						"Left": 100
+					}
+				},
+				{
+					"ControlType": "label",
+					"text_align": "left",
+					"Label": {
+						"lang_tag": "last_message",
+						"text": "Last message"
+					},
+					"Display": {
+						"Top": 80,
+						"Left": 10
+					}
+				},
+				{
+					"ControlGroup": 1,
+					"ControlType": "variable",
+					"text_align": "left",
+					"Display": {
+						"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+						"Variable": "LastMessage",
+						"Top": 80,
+						"Left": 100
+					}
+				},
+				{
+					"ControlGroup": 1,
+					"ControlType": "line_break"
+				},
+				{
+					"ControlType": "label",
+					"text_align": "left",
+					"Label": {
+						"lang_tag": "last_error",
+						"text": "Last error"
+					},
+					"Display": {
+						"Top": 95,
+						"Left": 10
+					}
+				},
+				{
+					"ControlGroup": 1,
+					"ControlType": "variable",
+					"text_align": "left",
+					"Display": {
+						"Service": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+						"Variable": "LastError",
+						"Top": 95,
+						"Left": 100
+					}
 				}
 			]
 		},
 		{
 			"Label": {
-				"lang_tag": "ui7_SurveillanceStationRemote_cameras",
+				"lang_tag": "ssr_cameras",
 				"text": "Cameras"
 			},
 			"Position": 1,
 			"TabType": "javascript",
-			"TopNavigationTab": 1,
+			"top_navigation_tab": 1,
 			"ScriptName": "J_SurveillanceStationRemote1.js",
 			"Function": "SurveillanceStationRemote.showCameras"
+		},
+		{
+			"Label": {
+				"lang_tag": "ssr_errors",
+				"text": "Errors"
+			},
+			"Position": 2,
+			"TabType": "javascript",
+			"ScriptName": "J_SurveillanceStationRemote1.js",
+			"Function": "SurveillanceStationRemote.showErrors"
+		},
+		{
+			"Label": {
+				"lang_tag": "donate",
+				"text": "Donate"
+			},
+			"Position": 3,
+			"TabType": "javascript",
+			"ScriptName": "J_SurveillanceStationRemote1.js",
+			"Function": "SurveillanceStationRemote.showDonate"
 		},
 		{
 			"Label":{
 				"lang_tag":"ui7_advanced",
 				"text":"Advanced"
 			},
-			"Position": 2,
+			"Position": 4,
 			"TabType": "javascript",
 			"ScriptName": "shared.js",
 			"Function": "advanced_device"
@@ -250,7 +362,7 @@
 				"lang_tag": "ui7_logs",
 				"text": "Logs"
 			},
-			"Position": 3,
+			"Position": 5,
 			"TabType": "javascript",
 			"ScriptName": "shared.js",
 			"Function": "device_logs"
@@ -260,7 +372,7 @@
 				"lang_tag": "ui7_notifications",
 				"text": "Notifications"
 			},
-			"Position": 4,
+			"Position": 6,
 			"TabType": "javascript",
 			"ScriptName": "shared.js",
 			"Function": "device_notifications"
@@ -270,7 +382,7 @@
 				"lang_tag": "ui7_device_scenes",
 				"text": "Scenes"
 			},
-			"Position": 5,
+			"Position": 7,
 			"TabType": "javascript",
 			"ScriptName": "shared.js",
 			"Function": "device_scenes"
@@ -280,10 +392,10 @@
 		{
 			"id": 1,
 			"label": {
-				"lang_tag": "ui7_SurveillanceStationRemote_has_com_failure_on_off",
-				"text": "A device has a communication failure or not"
+				"lang_tag": "ssr_has_com_failure_on_off",
+				"text": "Whenever Surveillance Station Remote has a communication failure or not"
 			},
-			"serviceId": "urn:upnp-org:serviceId:SurveillanceStationRemote1",
+			"serviceId": "urn:micasaverde-com:serviceId:HaDevice1",
 			"argumentList": [
 				{
 					"id": 1,
@@ -293,14 +405,14 @@
 						{
 							"Off": "0",
 							"HumanFriendlyText": {
-								"lang_tag": "ui7_SurveillanceStationRemote_has_no_more_com_failure",
+								"lang_tag": "hft_ssr_has_no_more_com_failure",
 								"text": "Whenever the _DEVICE_NAME_ has no more a communication failure"
 							}
 						},
 						{
 							"On": "1",
 							"HumanFriendlyText": {
-								"lang_tag": "ui7_SurveillanceStationRemote_has_com_failure",
+								"lang_tag": "hft_ssr_has_com_failure",
 								"text": "Whenever the _DEVICE_NAME_ has a communication failure"
 							}
 						}
