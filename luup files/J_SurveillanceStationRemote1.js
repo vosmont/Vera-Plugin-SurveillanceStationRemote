@@ -165,6 +165,19 @@ var SurveillanceStationRemote = ( function( api, $ ) {
 	var _uuid = '33894758-b77b-47e9-b4ff-fd01c54814c9';
 	var _deviceId = null;
 
+	var _terms = {
+		"Explanation for cameras": "\
+TODO"
+	};
+
+	function _T( t ) {
+		var v =_terms[ t ];
+		if ( v ) {
+			return v;
+		}
+		return t;
+	}
+
 	// Inject plugin specific CSS rules
 	Utils.injectCustomCSS( "SurveillanceStationRemote", '\
 .ssr-panel { padding: 5px; }\
@@ -296,7 +309,7 @@ var SurveillanceStationRemote = ( function( api, $ ) {
 		try {
 			api.setCpanelContent(
 				'<div id="ssr-cameras-panel" class="ssr-panel">'
-				+		'<div class="xee-toolbar">'
+				+		'<div class="ssr-toolbar">'
 				+			'<button type="button" class="ssr-help"><span class="icon icon-help"></span>Help</button>'
 				+			'<button type="button" class="ssr-refresh"><span class="icon icon-refresh"></span>Refresh</button>'
 				+		'</div>'
@@ -309,6 +322,13 @@ var SurveillanceStationRemote = ( function( api, $ ) {
 			);
 
 			// Manage UI events
+			$( "#ssr-cameras-panel" )
+				.on( "click", ".ssr-help" , function() {
+					$( ".ssr-explanation" ).toggleClass( "ssr-hidden" );
+				} )
+				.on( "click", ".ssr-refresh", function() {
+					_drawCameraList();
+				} );
 			$("#ssr-cameras")
 				.delegate( "button", "click", function( event ) {
 					var cameraId = $( this ).parents( ".ssr-camera:first" ).data( "cameraid" );
