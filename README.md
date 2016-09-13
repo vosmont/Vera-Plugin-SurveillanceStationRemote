@@ -4,7 +4,7 @@ Plugin for [Vera Control, Ltd.](http://getvera.com/) Home Controllers (VeraPlus,
 
 **Compatible with UI5 & UI7**
 
-Remote for Synology Surveillance Station.
+Remote for [Synology Surveillance Station](https://www.synology.com/en-uk/surveillance/).
 
 This plugin is able to enable/disable surveillance station and to start/stop external record.
 
