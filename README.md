@@ -1,6 +1,6 @@
-# Vera-Plugin-SurveillanceStationRemote
+# ![surveillance station remote](media/surveillancestationremote_logo) Vera-Plugin-SurveillanceStationRemote
 
-Plugin for [getVera](http://getvera.com/) Home Controller (VeraEdge, Vera3, VeraLite).
+Plugin for [Vera Control, Ltd.](http://getvera.com/) Home Controllers (VeraPlus, VeraEdge, Vera3, VeraLite).
 
 **Compatible with UI5 & UI7**
 
