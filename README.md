@@ -8,6 +8,6 @@ Designed for [Vera Control, Ltd.](http://getvera.com/) Home Controllers. This pl
 
 <br/>
 
-**Compatible with UI5 & UI7 / VeraPlus, VeraEdge, Vera3, VeraLite / openLuup**
+**Compatible with UI5 & UI7 / VeraPlus, VeraEdge, Vera3, VeraLite / [openLuup](https://github.com/akbooer/openLuup)**
 
 More informations here (in French) : http://www.touteladomotique.com/forum/viewtopic.php?f=48&t=16306
