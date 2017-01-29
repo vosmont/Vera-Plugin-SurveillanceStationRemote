@@ -1039,7 +1039,7 @@ function setRecordTarget( lul_device, lul_settings )
 		local camera = Cameras.getById( cameraId )
 		if camera then
 			debug( action .. " record for camera #" .. tostring(cameraId), "setRecordTarget" )
-			local data = requestAPI( "SYNO.SurveillanceStation.ExternalRecording", "Record", 2, {
+			local data = API.request( "SYNO.SurveillanceStation.ExternalRecording", "Record", 2, {
 				cameraId = cameraId,
 				action = action
 			})
