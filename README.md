@@ -1,3 +1,6 @@
+**This plugin is no longer maintained**
+
+
 # <img align="left" src="media/surveillancestationremote_logo.png"> Vera-Plugin-SurveillanceStationRemote
 
 Remote for [Synology Surveillance Station](https://www.synology.com/en-uk/surveillance/)
